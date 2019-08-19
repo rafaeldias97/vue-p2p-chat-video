@@ -1,58 +1,74 @@
 <template>
   <div class="hello">
-    <h1>{{ msg }}</h1>
-    <p>
-      For a guide and recipes on how to configure / customize this project,<br>
-      check out the
-      <a href="https://cli.vuejs.org" target="_blank" rel="noopener">vue-cli documentation</a>.
-    </p>
-    <h3>Installed CLI Plugins</h3>
-    <ul>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-babel" target="_blank" rel="noopener">babel</a></li>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-eslint" target="_blank" rel="noopener">eslint</a></li>
-    </ul>
-    <h3>Essential Links</h3>
-    <ul>
-      <li><a href="https://vuejs.org" target="_blank" rel="noopener">Core Docs</a></li>
-      <li><a href="https://forum.vuejs.org" target="_blank" rel="noopener">Forum</a></li>
-      <li><a href="https://chat.vuejs.org" target="_blank" rel="noopener">Community Chat</a></li>
-      <li><a href="https://twitter.com/vuejs" target="_blank" rel="noopener">Twitter</a></li>
-      <li><a href="https://news.vuejs.org" target="_blank" rel="noopener">News</a></li>
-    </ul>
-    <h3>Ecosystem</h3>
-    <ul>
-      <li><a href="https://router.vuejs.org" target="_blank" rel="noopener">vue-router</a></li>
-      <li><a href="https://vuex.vuejs.org" target="_blank" rel="noopener">vuex</a></li>
-      <li><a href="https://github.com/vuejs/vue-devtools#vue-devtools" target="_blank" rel="noopener">vue-devtools</a></li>
-      <li><a href="https://vue-loader.vuejs.org" target="_blank" rel="noopener">vue-loader</a></li>
-      <li><a href="https://github.com/vuejs/awesome-vue" target="_blank" rel="noopener">awesome-vue</a></li>
-    </ul>
+    <label>Seu Id</label><br>
+    <textarea v-model="yourId"></textarea><br>
+    <label>Id Amigo</label><br>
+    <textarea v-model="otherId"></textarea>
+    <button @click="connect()">Conectar</button><br>
+
+    <label>Entre com mensagem:</label><br>
+    <textarea v-model="yourMessage"></textarea>
+    <button @click="send">Enviar</button><br>
+    <pre v-bind="messages"></pre>
   </div>
 </template>
 
 <script>
+import Peer from 'simple-peer';
+
 export default {
-  name: 'HelloWorld',
-  props: {
-    msg: String
+  data () {
+    return {
+      yourId: '',
+      otherId: '',
+      yourMessage: '',
+      messages: '',
+      peer: ''
+    }
+  },
+  mounted () {
+    this.createP2P()
+  },
+  methods: {
+    createP2P () {
+      navigator.getUserMedia({ video: true, audio: true }, (stream) => {
+        const peer = new Peer({
+          initiator: location.hash == "#create",
+          trickle: false,
+          stream: stream
+        })
+        this.peer = peer
+
+        this.peer.on('signal', (data) => {
+            this.yourId = JSON.stringify(data)
+        })
+
+        this.peer.on('data', (data) => {
+            this.messages += data + '\n'
+        })
+
+        this.peer.on('stream', (stream) => {
+          let video = document.createElement('video');
+          document.body.appendChild(video);
+
+          video.srcObject = stream;
+          video.play();
+        })
+      }, (err) => {
+          console.error(err)
+      })
+    },
+    connect () {
+        let otherId = JSON.parse(this.otherId)
+        this.peer.signal(otherId)
+    },
+    send () {
+        let yourMessage = this.yourMessage
+        this.peer.send(yourMessage)
+    }
   }
 }
 </script>
 
-<!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-h3 {
-  margin: 40px 0 0;
-}
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-li {
-  display: inline-block;
-  margin: 0 10px;
-}
-a {
-  color: #42b983;
-}
 </style>
